@@ -65,7 +65,7 @@
   bound to a function of one argument, a context map. returns a
   (possibly modified) context map to be considered by catch clauses or
   nil to disable further catch processing. defaults to identity"}
-  *catch-hook* identity)
+  *catch-hook* vector)
 
 (defmacro throw+
   "Like the throw special form, but can throw any object.
@@ -106,16 +106,17 @@
     `(try
        ~@exprs
        (catch Throwable ~'&throw-context
-         (let [~'&throw-context
+         (let [[~'&throw-context rv#]
                (-> (if (instance? Stone ~'&throw-context)
                      (.context ~'&throw-context)
                      {:obj ~'&throw-context
                       :stack (.getStackTrace ~'&throw-context)})
                    (with-meta {:throwable ~'&throw-context})
                    (*catch-hook*))]
-           (when ~'&throw-context
+           (if ~'&throw-context
              (cond
               ~@(mapcat catch->cond catch-clauses)
               :else
-              (throw (-> ~'&throw-context meta :throwable))))))
+              (throw (-> ~'&throw-context meta :throwable)))
+             rv#)))
        ~@finally-clause)))
